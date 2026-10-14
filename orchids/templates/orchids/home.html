@@ -1,0 +1,78 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Orchid — My collection</title>
+  <link rel="stylesheet" href="{% static 'orchids/app.css' %}">
+  <script defer src="{% static 'orchids/app.js' %}"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation">
+      <a class="brand" href="/" aria-label="Orchid home"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 16C9 13 9 6 13 5c3-1 4 5 3 11Zm0 0c-2-7 3-12 6-9 2 2-1 7-6 9Zm0 0c7-3 12 1 10 5-1 3-7 1-10-5Zm0 0c6 4 5 10 1 11-3 0-4-6-1-11Zm0 0c-5 5-11 3-10-1 0-3 6-4 10 1Z"/><circle cx="16" cy="16" r="2.3"/></svg></span><span>orchid<span class="brand-period">.</span></span></a>
+      <button class="new-orchid side-action" data-open-form type="button"><span class="plus">＋</span> Add an orchid</button>
+      <div class="nav-label">YOUR GARDEN</div>
+      <a class="nav-item" data-nav="orchids" href="/"><span class="nav-icon">▦</span> Orchids <span class="nav-count" id="collection-count">—</span></a>
+      <a class="nav-item" data-nav="preorders" href="/preorders/"><span class="nav-icon">◷</span> Pre-orders <span class="nav-count" id="preorder-count"></span></a>
+      <a class="nav-item" data-nav="wishlist" href="/wishlist/"><span class="nav-icon">♡</span> Whish List</a>
+      <div class="sidebar-bottom"><div class="profile-orb">O</div><div class="profile-copy"><strong>My collection</strong><span>Personal garden</span></div><span class="more">···</span></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><span class="breadcrumb" id="breadcrumb">Orchids</span></header>
+      <section class="content-wrap">
+        <div class="intro-row"><div><h1 id="page-title">My orchids<span class="title-dot">.</span></h1></div><button class="primary-button" data-open-form type="button"><span>＋</span> Add an orchid</button></div>
+        <div class="toolbar"><div class="search-box"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.8" cy="8.8" r="5.8"/><path d="m13 13 4 4"/></svg><input id="search" type="search" placeholder="Search your collection…" aria-label="Search your collection"></div><div class="toolbar-hint" id="result-count"></div></div>
+        <section id="filters" class="filters" aria-label="Filter and sort collection">
+          <label class="filter-control"><span>Genus</span><select id="filter-genus"><option value="">All genera</option></select></label>
+          <label class="filter-control"><span>Farm</span><select id="filter-farm"><option value="">All farms</option></select></label>
+          <label class="filter-control"><span>Seller</span><select id="filter-seller"><option value="">All sellers</option></select></label>
+          <label class="filter-control sort-control"><span>Sort by</span><select id="sort-by"><option value="date_desc">Purchase date</option><option value="name_asc">Name A–Z</option><option value="genus_asc">Genus</option><option value="farm_asc">Farm</option><option value="seller_asc">Seller</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option><option value="date_asc">Purchase date: oldest</option></select></label>
+        </section>
+        <div id="status" class="status" role="status" aria-live="polite">Loading your collection…</div>
+        <div class="list-header" id="list-header"><span>PHOTO</span><span>RECORD</span><span>NAME</span><span>GENUS</span><span>PURCHASE DATE</span><span>ACTIONS</span></div>
+        <div id="orchid-list" class="orchid-list" aria-live="polite"></div>
+        <div id="preorder-list" class="orchid-list" aria-live="polite" hidden></div>
+        <div id="empty-state" class="empty-state" hidden><div class="empty-illustration"><span>✿</span></div><h2 id="empty-title">Your garden starts here</h2><p id="empty-copy">Add your first orchid and give it a place in your collection.</p><button class="primary-button" data-open-form type="button">＋ Add your first orchid</button></div>
+        <footer class="page-foot"><span>✿</span></footer>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="orchid-dialog" class="orchid-dialog">
+    <form id="orchid-form" class="dialog-card" novalidate>
+      <div class="dialog-top"><div><div class="eyebrow" id="form-kicker">NEW ORCHID</div><h2 id="form-title">Add an orchid</h2></div><button class="icon-button" type="button" data-close-form aria-label="Close">×</button></div>
+      <p class="dialog-hint">Fill in the important details. You can edit the rest later.</p>
+      <div class="step-indicator"><span class="step-dot current" data-step-dot="1"></span><span class="step-line"></span><span class="step-dot" data-step-dot="2"></span><span class="step-caption" id="step-caption">Step 1 of 2</span></div>
+      <section class="form-step active" data-step="1">
+        <label class="field-label" for="name">Name <span>*</span></label><input class="field-input" id="name" name="name" placeholder="e.g. Sogo Yukidian" required maxlength="255" autocomplete="off">
+        <label class="field-label" for="genus-select">Genus</label>
+        <div class="genus-control"><select class="field-input" id="genus-select"><option value="">Choose a genus</option><option value="Cattleya">Cattleya</option><option value="Phalaenopsis">Phalaenopsis</option><option value="Dendrobium">Dendrobium</option><option value="__custom">＋ Add a custom genus…</option></select><input class="field-input custom-genus" id="genus-custom" placeholder="Enter a genus" hidden></div>
+        <label class="field-label" for="comment">Notes</label><textarea class="field-input field-textarea" id="comment" name="comment" placeholder="Color, care notes, or anything you want to remember…" rows="3"></textarea>
+      </section>
+      <section class="form-step" data-step="2">
+        <label class="field-label" for="photo">Main photo</label><label class="upload-box" for="photo"><input id="photo" name="photo" type="file" accept="image/*"><span class="upload-icon">＋</span><strong id="photo-label">Choose a main photo</strong><small>This is the photo shown in your orchid list</small></label><div id="existing-photo" class="existing-photo" hidden></div>
+        <div class="field-row"><div><label class="field-label" for="farm">Farm</label><input class="field-input" id="farm" name="farm" placeholder="Farm name"></div><div><label class="field-label" for="seller">Seller</label><input class="field-input" id="seller" name="seller" placeholder="Seller name"></div></div>
+        <div class="field-row"><div><label class="field-label" for="date_arrived">Purchase date</label><input class="field-input" id="date_arrived" name="date_arrived" type="date"></div><div><label class="field-label" for="price_usd">Price (USD)</label><input class="field-input" id="price_usd" name="price_usd" type="number" min="0" step="0.01" placeholder="0.00"></div></div>
+      </section>
+      <div id="form-error" class="form-error" role="alert"></div>
+      <div class="dialog-actions"><button class="secondary-button" type="button" data-close-form>Cancel</button><button class="secondary-button back-button" type="button" id="back-step" hidden>Back</button><button class="primary-button" type="button" id="next-step">Continue <span>→</span></button><button class="primary-button" type="submit" id="save-orchid" hidden>Save orchid <span>→</span></button></div>
+    </form>
+  </dialog>
+
+  <dialog id="detail-dialog" class="orchid-dialog detail-dialog"><div class="dialog-card"><div class="dialog-top"><div><div class="eyebrow">ORCHID DETAILS</div><h2 id="detail-title"></h2></div><button class="icon-button" type="button" data-close-detail aria-label="Close">×</button></div><div id="detail-body" class="detail-body"></div><div class="dialog-actions"><button class="secondary-button" type="button" data-close-detail>Close</button><button class="primary-button" type="button" id="edit-orchid">Edit orchid <span>↗</span></button></div></div></dialog>
+
+  <dialog id="photo-log-dialog" class="orchid-dialog photo-log-dialog"><div class="dialog-card"><div class="dialog-top"><div><div class="eyebrow">PHOTO DOCUMENTATION</div><h2>Photo Log</h2><p class="dialog-hint" id="photo-log-orchid-name"></p></div><button class="icon-button" type="button" data-close-photo-log aria-label="Close">×</button></div><button class="upload-box photo-log-upload" id="add-photo-log" type="button"><span class="upload-icon">＋</span><strong>Add a progress photo</strong><small>The date added appears when you hover over a photo</small></button><div id="photo-log-gallery" class="detail-gallery"></div></div></dialog>
+
+  <dialog id="photo-preview-dialog" class="photo-preview-dialog"><button class="photo-preview-close" type="button" data-close-photo-preview aria-label="Close">×</button><figure><img id="photo-preview-image" alt=""><figcaption id="photo-preview-caption"></figcaption></figure></dialog>
+
+  <dialog id="event-type-dialog" class="orchid-dialog event-type-dialog"><div class="dialog-card"><div class="dialog-top"><div><div class="eyebrow">PLANT JOURNAL</div><h2>Choose an event</h2><p class="dialog-hint" id="event-picker-orchid-name"></p></div><button class="icon-button" type="button" data-close-event-picker aria-label="Close">×</button></div><div class="event-type-grid"><button class="event-type-card" type="button" data-event-type="repotting"><span class="event-type-icon">🪴</span><span>Repotting</span></button><button class="event-type-card" type="button" data-event-type="pest_treatment"><span class="event-type-icon">🐛</span><span>Pest treatment</span></button><button class="event-type-card" type="button" data-event-type="disease_treatment"><span class="event-type-icon">🩺</span><span>Disease treatment</span></button><button class="event-type-card" type="button" data-event-type="division"><span class="event-type-icon">✂️</span><span>Division</span></button><button class="event-type-card" type="button" data-event-type="unwell"><span class="event-type-icon">🌿</span><span>Plant was unwell</span></button></div></div></dialog>
+
+  <dialog id="event-dialog" class="orchid-dialog"><form id="event-form" class="dialog-card" novalidate><div class="dialog-top"><div><div class="eyebrow">PLANT JOURNAL</div><h2>Add an event</h2></div><button class="icon-button" type="button" data-close-event aria-label="Close">×</button></div><p class="dialog-hint" id="event-orchid-name"></p><label class="field-label">Event</label><div class="selected-event-kind"><span class="event-type-icon" id="event-form-icon"></span><strong id="event-form-type"></strong></div><input type="hidden" id="event-type"><label class="field-label" for="event-date">Date</label><input class="field-input" id="event-date" type="date" required><label class="field-label" for="event-notes">Notes</label><textarea class="field-input field-textarea" id="event-notes" rows="3" placeholder="Optional details…"></textarea><div id="event-error" class="form-error" role="alert"></div><div class="dialog-actions"><button class="secondary-button" type="button" data-close-event>Cancel</button><button class="primary-button" id="save-event" type="submit">Save event <span>→</span></button></div></form></dialog>
+
+  <input id="main-photo-from-detail" type="file" accept="image/*" hidden>
+  <input id="gallery-photo" type="file" accept="image/*" hidden>
+</body>
+</html>

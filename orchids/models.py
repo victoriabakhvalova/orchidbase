@@ -19,6 +19,7 @@ class Orchid(models.Model):
     seller = models.JSONField(default=list, blank=True)
     date_arrived = models.DateField(null=True, blank=True)
     price_usd = models.DecimalField(max_digits=10, decimal_places=2, null=True,blank=True)
+    main_photo = models.ImageField(upload_to='orchid_main_photos/', null=True, blank=True)
     bloom_dates = models.JSONField(default=list, blank=True)
     repot_dates = models.JSONField(default=list, blank=True)
     comment = models.TextField(blank=True)
@@ -35,10 +36,32 @@ class OrchidPhoto(models.Model):
     orchid = models.ForeignKey(Orchid, related_name="photos", on_delete=models.CASCADE)
     image = models.ImageField(upload_to='orchid_photos/')
     description = models.CharField(max_length=225, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False, blank=True, null=True)
     is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Photo for {self.orchid.name}"
+
+
+class OrchidEvent(models.Model):
+    class EventType(models.TextChoices):
+        REPOTTING = 'repotting', 'Repotting'
+        PEST_TREATMENT = 'pest_treatment', 'Pest treatment'
+        DISEASE_TREATMENT = 'disease_treatment', 'Disease treatment'
+        DIVISION = 'division', 'Division'
+        UNWELL = 'unwell', 'Plant was unwell'
+
+    orchid = models.ForeignKey(Orchid, related_name='events', on_delete=models.CASCADE)
+    event_type = models.CharField(max_length=32, choices=EventType.choices)
+    event_date = models.DateField()
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        ordering = ['-event_date', '-created_at']
+
+    def __str__(self):
+        return f"{self.get_event_type_display()} — {self.orchid.name} ({self.event_date})"
 
 class Preorder(models.Model):
     owner = models.ForeignKey(
