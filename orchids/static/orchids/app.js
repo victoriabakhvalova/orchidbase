@@ -12,6 +12,10 @@
   const eventTypeDialog = document.querySelector('#event-type-dialog');
   const eventDialog = document.querySelector('#event-dialog');
   const eventForm = document.querySelector('#event-form');
+  const authScreen = document.querySelector('#auth-screen');
+  const appShell = document.querySelector('#app-shell');
+  const authDialog = document.querySelector('#auth-dialog');
+  const authForm = document.querySelector('#auth-form');
   const form = document.querySelector('#orchid-form');
   const errorBox = document.querySelector('#form-error');
   const saveButton = document.querySelector('#save-orchid');
@@ -31,32 +35,60 @@
 
   const valueOf = (item, key) => Array.isArray(item[key]) ? item[key].filter(Boolean).join(', ') : (item[key] ?? '');
   const firstValue = (item, key) => Array.isArray(item[key]) ? item[key][0] || '' : item[key] || '';
-  const makeDeviceId = () => {
-    let id = localStorage.getItem('orchid-device-id');
-    if (!id) { id = crypto.randomUUID(); localStorage.setItem('orchid-device-id', id); }
-    return id;
-  };
-
-  async function getToken(force = false) {
-    let token = localStorage.getItem('orchid-access-token');
-    if (token && !force) return token;
-    const response = await fetch('/api/auth/device/', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({device_id: makeDeviceId()})});
-    if (!response.ok) throw new Error('Could not connect to your collection. Refresh the page and try again.');
-    const data = await response.json();
-    localStorage.setItem('orchid-access-token', data.access);
-    return data.access;
+  function csrfToken() {
+    const cookie = document.cookie.split('; ').find(value => value.startsWith('csrftoken='));
+    return cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : '';
   }
-
+  async function refreshTokens() {
+    const response = await fetch('/api/auth/refresh/', {method: 'POST', credentials: 'same-origin', headers: {'X-CSRFToken': csrfToken()}});
+    return response.ok;
+  }
   async function api(path, options = {}, retried = false) {
-    const token = await getToken();
-    const response = await fetch(path, {...options, headers: {...options.headers, Authorization: `Bearer ${token}`}});
-    if (response.status === 401 && !retried) { localStorage.removeItem('orchid-access-token'); return api(path, options, true); }
+    const headers = {...options.headers};
+    if (!['GET', 'HEAD', 'OPTIONS'].includes((options.method || 'GET').toUpperCase())) headers['X-CSRFToken'] = csrfToken();
+    const response = await fetch(path, {...options, credentials: 'same-origin', headers});
+    if (response.status === 401 && !retried && path !== '/api/auth/refresh/') {
+      if (await refreshTokens()) return api(path, options, true);
+      showAuthScreen();
+      throw new Error('Your session has expired. Please sign in again.');
+    }
     if (!response.ok) {
       let message = 'Something went wrong. Please try again.';
       try { const body = await response.json(); message = body.detail || Object.values(body).flat().join(' '); } catch (_) { /* empty response */ }
       throw new Error(message);
     }
     return response.status === 204 ? null : response.json();
+  }
+
+  function showAuthScreen() {
+    appShell.hidden = true;
+    authScreen.hidden = false;
+  }
+  function openAuth(mode) {
+    authForm.reset();
+    document.querySelector('#auth-error').textContent = '';
+    authDialog.dataset.mode = mode;
+    const isRegister = mode === 'register';
+    document.querySelector('#auth-kicker').textContent = isRegister ? 'NEW ACCOUNT' : 'WELCOME BACK';
+    document.querySelector('#auth-title').textContent = isRegister ? 'Create account' : 'Log in';
+    document.querySelector('#auth-description').textContent = isRegister ? 'Create your account with an email and password.' : 'Use your email and password to open your collection.';
+    document.querySelector('#auth-password').autocomplete = isRegister ? 'new-password' : 'current-password';
+    document.querySelector('#auth-password').minLength = isRegister ? 7 : 1;
+    document.querySelector('#auth-submit').textContent = isRegister ? 'Create account' : 'Log in';
+    document.querySelector('#auth-switch').textContent = isRegister ? 'Already have an account? Log in' : 'Create an account';
+    authDialog.showModal();
+    document.querySelector('#auth-email').focus();
+  }
+  function showApp(user) {
+    authScreen.hidden = true;
+    appShell.hidden = false;
+    document.querySelector('#profile-email').textContent = user.email;
+    document.querySelector('#profile-initial').textContent = (user.email || '?').charAt(0).toUpperCase();
+    initializeCollectionView();
+  }
+  async function startApp() {
+    try { showApp(await api('/api/auth/me/')); }
+    catch (_) { showAuthScreen(); }
   }
 
   function el(tag, className, text) {
@@ -448,10 +480,11 @@
     } catch (error) { status.textContent = error.message; status.className = 'status error'; }
   }
 
-  document.querySelector('[data-nav="orchids"]').classList.toggle('active', !isPreorders && !isWishlist);
-  document.querySelector('[data-nav="preorders"]').classList.toggle('active', isPreorders);
-  document.querySelector('[data-nav="wishlist"]').classList.toggle('active', isWishlist);
-  if (isWishlist) {
+  function initializeCollectionView() {
+    document.querySelector('[data-nav="orchids"]').classList.toggle('active', !isPreorders && !isWishlist);
+    document.querySelector('[data-nav="preorders"]').classList.toggle('active', isPreorders);
+    document.querySelector('[data-nav="wishlist"]').classList.toggle('active', isWishlist);
+    if (isWishlist) {
     document.querySelector('#page-title').textContent = 'Whish List';
     document.querySelector('#breadcrumb').textContent = 'Whish List';
     document.querySelector('.intro-row .primary-button').hidden = true;
@@ -464,7 +497,7 @@
     emptyState.hidden = false;
     emptyState.querySelector('[data-open-form]').hidden = true;
     status.textContent = '';
-  } else if (isPreorders) {
+    } else if (isPreorders) {
     document.querySelector('#page-title').textContent = 'Pre-orders';
     document.querySelector('#breadcrumb').textContent = 'Pre-orders';
     document.querySelector('#list-header').innerHTML = '<span>RECORD</span><span>NAME</span><span>GENUS</span><span>FARM</span><span>STATUS</span><span>EXPECTED</span>';
@@ -475,5 +508,61 @@
     filters.hidden = true; document.querySelector('#list-header').hidden = true; list.hidden = true; preorderList.hidden = false; emptyState.querySelector('[data-open-form]').hidden = true;
     document.querySelector('#search').value = '';
     loadPreorders();
-  } else { loadOrchids(); }
+    } else { loadOrchids(); }
+  }
+
+  document.querySelector('#open-login').addEventListener('click', () => openAuth('login'));
+  document.querySelector('#open-register').addEventListener('click', () => openAuth('register'));
+  document.querySelector('#close-auth').addEventListener('click', () => authDialog.close());
+  document.querySelector('#auth-switch').addEventListener('click', () => openAuth(authDialog.dataset.mode === 'register' ? 'login' : 'register'));
+  authForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const mode = authDialog.dataset.mode;
+    const submit = document.querySelector('#auth-submit');
+    const error = document.querySelector('#auth-error');
+    error.textContent = '';
+    submit.disabled = true;
+    try {
+      const response = await fetch(`/api/auth/${mode}/`, {
+        method: 'POST', credentials: 'same-origin',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()},
+        body: JSON.stringify({
+          email: document.querySelector('#auth-email').value.trim(),
+          password: document.querySelector('#auth-password').value,
+          ...(mode === 'register' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(localStorage.getItem('orchid-device-id') || '') ? {legacy_device_id: localStorage.getItem('orchid-device-id')} : {})
+        })
+      });
+      const data = response.status === 204 ? null : await response.json();
+      if (!response.ok) {
+        const messages = data?.detail ? [data.detail] : Object.values(data || {}).flat();
+        throw new Error(messages.join(' ') || 'Could not sign in. Please try again.');
+      }
+      authDialog.close();
+      authForm.reset();
+      localStorage.removeItem('orchid-access-token');
+      if (mode === 'register') localStorage.removeItem('orchid-device-id');
+      showApp({user_id: data.user_id, email: data.email});
+    } catch (error) { document.querySelector('#auth-error').textContent = error.message; }
+    finally { submit.disabled = false; }
+  });
+  document.querySelector('#profile-menu-button').addEventListener('click', event => {
+    event.stopPropagation();
+    const dropdown = document.querySelector('#profile-dropdown');
+    dropdown.hidden = !dropdown.hidden;
+    document.querySelector('#profile-menu-button').setAttribute('aria-expanded', String(!dropdown.hidden));
+  });
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.profile-menu-wrap')) {
+      document.querySelector('#profile-dropdown').hidden = true;
+      document.querySelector('#profile-menu-button').setAttribute('aria-expanded', 'false');
+    }
+  });
+  document.querySelector('#logout-button').addEventListener('click', async () => {
+    try { await api('/api/auth/logout/', {method: 'POST'}); }
+    catch (_) { /* The session may already have expired; still return to the sign-in screen. */ }
+    document.querySelector('#profile-dropdown').hidden = true;
+    orchids = []; photos = []; events = [];
+    showAuthScreen();
+  });
+  startApp();
 })();

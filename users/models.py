@@ -8,7 +8,7 @@ class UserManager(BaseUserManager):
         if not device_id and not email:
             raise ValueError("Нужен либо device_id, либо email")
 
-        email = self.normalize_email(email) if email else None
+        email = email.strip().lower() if email else None
         user = self.model(device_id=device_id, email=email, **extra_fields)
 
         if password:
